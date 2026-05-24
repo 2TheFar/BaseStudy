@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>螺旋矩阵 · 思考过程可视化</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f172a;--card:#1e293b;--card2:#1a2332;--border:#334155;--text:#e2e8f0;--dim:#94a3b8;--accent:#3b82f6;--accent2:#60a5fa;--green:#22c55e;--green-bg:rgba(34,197,94,.1);--green-border:rgba(34,197,94,.3);--red:#ef4444;--red-bg:rgba(239,68,68,.1);--red-border:rgba(239,68,68,.3);--orange:#f59e0b;--orange-bg:rgba(245,158,11,.1);--orange-border:rgba(245,158,11,.3);--purple:#a855f7;--purple-bg:rgba(168,85,247,.1);--purple-border:rgba(168,85,247,.3);--cyan:#06b6d4;--cyan-bg:rgba(6,182,212,.1);--cyan-border:rgba(6,182,212,.3)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;overflow-x:hidden}
+.container{max-width:1060px;margin:0 auto;padding:20px}
+
+.hero{text-align:center;padding:50px 20px 30px}
+.hero h1{font-size:2.2em;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.hero .sub{color:var(--dim);font-size:1em;letter-spacing:1px}
+
+.section{margin:44px 0}
+.section-title{font-size:1.35em;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.section-title .icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.section-desc{color:var(--dim);margin-bottom:22px;font-size:.92em}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:26px;margin-bottom:18px}
+
+.spiral-wrap{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.spiral-matrix{flex-shrink:0}
+.spiral-result{flex:1;min-width:260px}
+.matrix-grid{display:inline-grid;gap:3px;padding:12px;background:rgba(15,23,42,.6);border-radius:10px;border:1px solid var(--border)}
+.matrix-cell{width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-weight:600;font-size:.95em;background:var(--card2);border:1px solid var(--border);transition:all .35s ease;position:relative}
+.matrix-cell.active{transform:scale(1.08);z-index:1}
+.matrix-cell.done{opacity:.45}
+.matrix-cell.dir-right{border-color:var(--accent);box-shadow:0 0 12px rgba(59,130,246,.3)}
+.matrix-cell.dir-down{border-color:var(--green);box-shadow:0 0 12px rgba(34,197,94,.3)}
+.matrix-cell.dir-left{border-color:var(--orange);box-shadow:0 0 12px rgba(245,158,11,.3)}
+.matrix-cell.dir-up{border-color:var(--purple);box-shadow:0 0 12px rgba(168,85,247,.3)}
+
+.spiral-controls{display:flex;gap:10px;margin-top:16px;justify-content:center;flex-wrap:wrap}
+.spiral-controls button{padding:8px 20px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);cursor:pointer;font-size:.88em;transition:all .2s}
+.spiral-controls button:hover{border-color:var(--accent);background:rgba(59,130,246,.1)}
+.spiral-controls button.active-btn{border-color:var(--accent);background:rgba(59,130,246,.15);color:var(--accent2)}
+
+.result-sequence{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.result-num{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:.85em;font-weight:600;background:var(--card2);border:1px solid var(--border);transition:all .3s}
+.result-num.highlight{border-color:var(--accent);color:var(--accent2);background:rgba(59,130,246,.1)}
+
+.dir-legend{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
+.dir-legend .item{display:flex;align-items:center;gap:6px;font-size:.82em;color:var(--dim)}
+.dir-legend .dot{width:10px;height:10px;border-radius:3px}
+
+.boundary-viz{margin-top:18px;padding:14px;background:rgba(15,23,42,.5);border-radius:8px;border:1px solid var(--border)}
+.boundary-viz .label{font-size:.8em;color:var(--dim);margin-bottom:8px}
+.boundary-state{display:flex;gap:16px;flex-wrap:wrap}
+.boundary-state .b-item{text-align:center;padding:6px 12px;border-radius:6px;background:var(--card2);border:1px solid var(--border);min-width:70px}
+.boundary-state .b-item .b-name{font-size:.7em;color:var(--dim)}
+.boundary-state .b-item .b-val{font-size:1.1em;font-weight:700;color:var(--accent2)}
+
+.thinking-flow{position:relative;padding-left:0}
+.think-step{display:flex;gap:16px;margin-bottom:20px;opacity:0;transform:translateY(12px);transition:all .5s ease-out}
+.think-step.visible{opacity:1;transform:translateY(0)}
+.think-marker{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:36px}
+.think-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent);background:var(--bg);z-index:1;flex-shrink:0}
+.think-dot.good{border-color:var(--green);background:var(--green-bg)}
+.think-dot.warn{border-color:var(--orange);background:var(--orange-bg)}
+.think-dot.great{border-color:var(--cyan);background:var(--cyan-bg);box-shadow:0 0 10px rgba(6,182,212,.3)}
+.think-line{flex:1;width:2px;background:var(--border);min-height:20px}
+.think-content{flex:1;padding:14px 18px;border-radius:10px;border:1px solid var(--border);background:var(--card2)}
+.think-content .think-quote{font-size:.88em;color:var(--dim);font-style:italic;margin-bottom:8px;padding-left:10px;border-left:2px solid var(--border)}
+.think-content .think-label{display:inline-block;padding:2px 10px;border-radius:10px;font-size:.72em;font-weight:600;margin-bottom:6px}
+.think-content .think-label.pride{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.think-content .think-label.improve{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.think-content .think-label.insight{background:var(--cyan-bg);color:var(--cyan);border:1px solid var(--cyan-border)}
+.think-content .think-label.evolution{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border)}
+.think-content .think-text{font-size:.88em;line-height:1.7}
+.think-content .think-text strong{color:var(--accent2)}
+
+.review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.review-card{padding:22px;border-radius:10px;border:1px solid}
+.review-card.pride-card{background:var(--green-bg);border-color:var(--green-border)}
+.review-card.improve-card{background:var(--red-bg);border-color:var(--red-border)}
+.review-card .r-title{font-weight:700;font-size:1.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.review-card .r-text{font-size:.88em;line-height:1.7;color:var(--dim)}
+.review-card.pride-card .r-title{color:var(--green)}
+.review-card.improve-card .r-title{color:var(--red)}
+
+.compare-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.compare-panel{border-radius:10px;border:1px solid var(--border);overflow:hidden}
+.compare-panel .panel-head{padding:10px 16px;font-weight:600;font-size:.9em;display:flex;align-items:center;gap:8px}
+.compare-panel.yours .panel-head{background:var(--orange-bg);color:var(--orange);border-bottom:1px solid var(--orange-border)}
+.compare-panel.standard .panel-head{background:var(--green-bg);color:var(--green);border-bottom:1px solid var(--green-border)}
+.compare-panel pre{padding:16px;font-size:.78em;line-height:1.7;overflow-x:auto;background:var(--card2);color:#cbd5e1;font-family:"Cascadia Code","Fira Code","JetBrains Mono",Consolas,monospace}
+.compare-panel pre .hl-key{color:var(--purple)}
+.compare-panel pre .hl-str{color:var(--green)}
+.compare-panel pre .hl-num{color:var(--orange)}
+.compare-panel pre .hl-comment{color:#64748b;font-style:italic}
+.compare-panel pre .hl-bad{background:rgba(239,68,68,.12);border-radius:3px;padding:0 2px}
+.compare-panel pre .hl-good{background:rgba(34,197,94,.1);border-radius:3px;padding:0 2px}
+
+.diff-table{width:100%;border-collapse:collapse;font-size:.85em;margin-top:16px}
+.diff-table th{text-align:left;padding:10px 14px;background:var(--card2);border-bottom:1px solid var(--border);color:var(--dim);font-weight:600}
+.diff-table td{padding:10px 14px;border-bottom:1px solid rgba(51,65,85,.4)}
+.diff-table tr:last-child td{border-bottom:none}
+.diff-table .dim-cell{color:var(--dim)}
+.diff-table .good-cell{color:var(--green)}
+.diff-table .bad-cell{color:var(--red)}
+.diff-table .accent-cell{color:var(--accent2)}
+
+.summary-box{background:linear-gradient(135deg,rgba(6,182,212,.06),rgba(34,197,94,.06));border:1px solid rgba(6,182,212,.2);border-radius:12px;padding:26px;text-align:center}
+.summary-box p{color:var(--dim);font-size:.92em;max-width:680px;margin:0 auto;line-height:1.8}
+.summary-box .highlight-green{color:var(--green);font-weight:600}
+.summary-box .highlight-red{color:var(--red);font-weight:600}
+.summary-box .highlight-cyan{color:var(--cyan);font-weight:600}
+
+.footer{text-align:center;padding:36px 0 16px;color:var(--dim);font-size:.78em;opacity:.5}
+
+@media(max-width:700px){
+.hero h1{font-size:1.6em}
+.compare-wrap{grid-template-columns:1fr}
+.matrix-cell{width:38px;height:38px;font-size:.82em}
+.spiral-wrap{flex-direction:column;align-items:center}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+  <h1>螺旋矩阵 · 思考过程可视化</h1>
+  <p class="sub">LeetCode 54 · 你的思路复盘与标准答案对比</p>
+</div>
+
+<div class="section">
+  <div class="section-title"><span class="icon" style="background:rgba(59,130,246,.15);color:var(--accent2)">🔄</span> 标准答案执行动画</div>
+  <p class="section-desc">观察四指针边界收缩法如何一圈一圈地螺旋遍历矩阵。点击按钮控制动画。</p>
+  <div class="card">
+    <div class="spiral-wrap">
+      <div class="spiral-matrix">
+        <div class="matrix-grid" id="matrixGrid"></div>
+        <div class="spiral-controls">
+          <button id="btnPlay">▶ 播放</button>
+          <button id="btnPause">⏸ 暂停</button>
+          <button id="btnStep">⏭ 单步</button>
+          <button id="btnReset">↺ 重置</button>
+        </div>
+        <div class="dir-legend">
+          <div class="item"><span class="dot" style="background:var(--accent)"></span>左→右</div>
+          <div class="item"><span class="dot" style="background:var(--green)"></span>上→下</div>
+          <div class="item"><span class="dot" style="background:var(--orange)"></span>右→左</div>
+          <div class="item"><span class="dot" style="background:var(--purple)"></span>下→上</div>
+        </div>
+      </div>
+      <div class="spiral-result">
+        <div style="font-weight:600;margin-bottom:6px;font-size:.92em">遍历结果序列</div>
+        <div class="result-sequence" id="resultSeq"></div>
+        <div class="boundary-viz">
+          <div class="label">四指针边界状态</div>
+          <div class="boundary-state" id="boundaryState">
+            <div class="b-item"><div class="b-name">top</div><div class="b-val" id="bTop">0</div></div>
+            <div class="b-item"><div class="b-name">bottom</div><div class="b-val" id="bBottom">3</div></div>
+            <div class="b-item"><div class="b-name">left</div><div class="b-val" id="bLeft">0</div></div>
+            <div class="b-item"><div class="b-name">right</div><div class="b-val" id="bRight">3</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title"><span class="icon" style="background:rgba(6,182,212,.15);color:var(--cyan)">🧠</span> 思考过程梳理与点评</div>
+  <p class="section-desc">从你的注释中还原第一人称的思考旅程，逐条点评闪光点与改进空间。</p>
+  <div class="card">
+    <div class="thinking-flow" id="thinkingFlow">
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot warn"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"如果想一次循环走完，除了右上角、右下角、左下角、还有(1,0)外，其他的拐角处都很难判断"</div>
+          <span class="think-label improve">⚠ 需改进</span>
+          <div class="think-text">你一开始试图用<strong>一次循环 + 拐点判断</strong>来解决问题，这是一个自然的直觉，但方向偏了。拐点判断需要维护方向状态和越界检查，逻辑复杂且容易出错。<strong>改进：遇到"很难判断"的信号时，应该更早切换思路——不是硬啃拐点，而是换一种遍历结构。</strong></div>
+        </div>
+      </div>
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot great"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"尤其是最后一个位置，最中间的地方，你咋知道这里是最后一个，咋知道后面的都遍历过了呢？"</div>
+          <span class="think-label insight">💡 洞察力</span>
+          <div class="think-text">这个问题问得非常好！你精准地抓住了核心难点——<strong>终止条件</strong>。很多人写螺旋矩阵就栽在最后一圈的处理上。你能主动意识到"中间元素怎么知道是最后一个"，说明你对边界情况有天然的敏感度，这是优秀算法思维的标志。</div>
+        </div>
+      </div>
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot good"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"外圈的四个拐点容易判断，内圈的拐点难以判断，那我就把矩阵拆分成一个又一个圈来遍历不就好了"</div>
+          <span class="think-label pride">✨ 核心突破</span>
+          <div class="think-text">这就是螺旋矩阵的<strong>终极本质</strong>！从"逐元素遍历"切换到"逐圈遍历"，把一个 O(mn) 的复杂走位问题，降维成 O(圈数) 的重复模式。<strong>这是你整个思考过程中最关键的一次跃迁，也是最值得骄傲的地方。</strong></div>
+        </div>
+      </div>
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot good"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"又一次，想到一个思路去问AI，没想到就是最优思路，我好强"</div>
+          <span class="think-label pride">✨ 自我肯定</span>
+          <div class="think-text">自信是对的！逐圈遍历 + 四指针确实是业界标准解法。你能独立推导到这一步，说明你的<strong>问题分解能力</strong>已经很强。不过要注意：思路对了不等于代码就对了，<strong>思路和代码之间还有"表达方式"的鸿沟</strong>，这正是你接下来需要跨越的。</div>
+        </div>
+      </div>
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot warn"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"圈数可以靠宽度确定，向上取整(width/2)，最后一个可以靠计数确定（NO！）"</div>
+          <span class="think-label improve">⚠ 需改进</span>
+          <div class="think-text">你自己否定了"算圈数"的方案，这是对的！但你否定它的理由不够清晰。<strong>根本问题不是"算不准圈数"，而是矩形矩阵的最后一圈可能是单行或单列，算圈数无法处理这种退化情况。</strong>改进：否定一个方案时，尽量说清"为什么不行"，而不仅仅是"NO"。</div>
+        </div>
+      </div>
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot great"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"最好的终止判断是预设四个边界，只靠四个边界互相约束：(top <= bottom && left <= right)"</div>
+          <span class="think-label insight">💡 关键顿悟</span>
+          <div class="think-text">这是你的<strong>第二次关键跃迁</strong>！从"算圈数"进化到"让边界自己说话"，这是从<strong>静态思维到动态思维</strong>的转变。四指针互相约束，不需要额外计算，边界收缩到交叉就自然停止——这就是最优雅的终止条件。</div>
+        </div>
+      </div>
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot good"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"不过这样跟好找拐点也没啥关系了，只要到边界停下来就是拐点了，不用一开始就计算出来，更加动态"</div>
+          <span class="think-label pride">✨ 认知升级</span>
+          <div class="think-text">你意识到了一个深刻的道理：<strong>"拐点"不是一个需要提前计算的东西，而是边界收缩的自然结果。</strong>走完一条边→收缩边界→自然转向，根本不需要拐点判断逻辑。这个认知把整个问题的复杂度又降了一个层级。</div>
+        </div>
+      </div>
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot great"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"从双指针进化到四指针，动态停止薄纱算圈数"</div>
+          <span class="think-label evolution">🚀 思维进化</span>
+          <div class="think-text">这句话浓缩了你的整个思维跃迁路径：<strong>单指针 → 双指针 → 四指针</strong>，<strong>静态计算 → 动态约束</strong>。能用一句话总结自己的进化过程，说明你真正理解了问题的本质。这种<strong>元认知能力</strong>（对自己思考过程的反思和总结）比解出题目本身更有价值。</div>
+        </div>
+      </div>
+
+      <div class="think-step">
+        <div class="think-marker"><div class="think-dot warn"></div><div class="think-line"></div></div>
+        <div class="think-content">
+          <div class="think-quote">"每走完一条边，就收缩对应指针 / 边界表示还没有遍历到的范围"</div>
+          <span class="think-label improve">⚠ 思路对但代码表达偏差</span>
+          <div class="think-text">你的理解完全正确！但在代码中，你选择了<strong>手动维护 i,j 坐标 + 计算步数</strong>来实现，而不是<strong>直接按边界遍历整行/整列</strong>。这说明你的<strong>思路和代码表达之间存在断层</strong>——想的是"边界"，写的是"坐标行走"。标准答案直接用 for(left→right) 遍历一行，更直接地表达了"走一条边"的语义。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title"><span class="icon" style="background:rgba(34,197,94,.15);color:var(--green)">📊</span> 综合点评</div>
+  <p class="section-desc">你的思考过程中，什么是真正的闪光点，什么需要刻意练习。</p>
+  <div class="review-grid">
+    <div class="review-card pride-card">
+      <div class="r-title">✅ 值得骄傲</div>
+      <div class="r-text">
+        <strong>1. 问题分解能力极强</strong>：从"逐元素"到"逐圈"的跃迁，是这道题最核心的突破，你独立完成了。<br><br>
+        <strong>2. 边界敏感度高</strong>：主动思考终止条件、最后一圈的特殊性，这是区分"能写代码"和"能写对代码"的关键。<br><br>
+        <strong>3. 元认知能力突出</strong>：能反思自己的思路演进（双指针→四指针），并总结出"动态停止薄纱算圈数"这样的精炼结论。<br><br>
+        <strong>4. 敢于自我否定</strong>：算圈数的方案自己推翻了，这比固执地走错路要好得多。
+      </div>
+    </div>
+    <div class="review-card improve-card">
+      <div class="r-title">⚠ 需要改进</div>
+      <div class="r-text">
+        <strong>1. 思路→代码的转化能力</strong>：想的是"边界收缩"，写的是"坐标行走+算步数"，表达方式不够直接。应该练习<strong>让代码结构直接反映思路</strong>。<br><br>
+        <strong>2. 否定方案时缺乏深层归因</strong>：说"NO"容易，说清"为什么不行"更难。算圈数不行不是因为"算不准"，而是因为<strong>退化情况（单行/单列）无法统一处理</strong>。<br><br>
+        <strong>3. 代码中的边界保护意识不足</strong>：标准答案在右→左和下→上两步前都加了 if 判断，防止单行/单列重复遍历。你的代码缺少这种防御性编程的习惯。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title"><span class="icon" style="background:rgba(168,85,247,.15);color:var(--purple)">⚖️</span> 代码对比</div>
+  <p class="section-desc">你的写法 vs 标准答案，逐行对照核心差异。</p>
+  <div class="card">
+    <div class="compare-wrap">
+      <div class="compare-panel yours">
+        <div class="panel-head">✏️ 你的写法</div>
+        <pre><span class="hl-comment">// 手动维护 i, j 坐标</span>
+<span class="hl-key">int</span> i = <span class="hl-num">0</span>, j = <span class="hl-num">0</span>;
+
+<span class="hl-key">while</span> (left <= right && top <= bottom) {
+    <span class="hl-bad">res.add(matrix[i][j]);</span>  <span class="hl-comment">// ⚠ 起始位置单独加，容易重复</span>
+
+    <span class="hl-bad">for (k=1; k<=right-left; k++)</span>  <span class="hl-comment">// ⚠ 手动算步数</span>
+        { j++; res.add(matrix[i][j]); }
+    top++;
+
+    <span class="hl-bad">for (k=1; k<=bottom-top+1; k++)</span>  <span class="hl-comment">// ⚠ 步数公式容易算错</span>
+        { i++; res.add(matrix[i][j]); }
+    right--;
+
+    <span class="hl-bad">if (left>right || top>bottom) break;</span>  <span class="hl-comment">// ⚠ 手动中断检查</span>
+
+    <span class="hl-bad">for (k=1; k<=right-left+1; k++)</span>
+        { j--; res.add(matrix[i][j]); }
+    bottom--;
+
+    <span class="hl-bad">if (left>right || top>bottom) break;</span>
+
+    <span class="hl-bad">for (k=1; k<=bottom-top+1; k++)</span>
+        { i--; res.add(matrix[i][j]); }
+    j++;  <span class="hl-comment">// ⚠ 手动归位到下一圈起点</span>
+    left++;
+}</pre>
+      </div>
+      <div class="compare-panel standard">
+        <div class="panel-head">⭐ 标准答案</div>
+        <pre><span class="hl-comment">// 不维护坐标，直接按边界遍历</span>
+
+<span class="hl-key">while</span> (top <= bottom && left <= right) {
+    <span class="hl-good">for (j=left; j<=right; j++)</span>  <span class="hl-comment">// ✅ 直接遍历一整行</span>
+        res.add(matrix[top][j]);
+    top++;
+
+    <span class="hl-good">for (i=top; i<=bottom; i++)</span>  <span class="hl-comment">// ✅ 直接遍历一整列</span>
+        res.add(matrix[i][right]);
+    right--;
+
+    <span class="hl-good">if (top <= bottom) {</span>  <span class="hl-comment">// ✅ 防单行重复</span>
+        <span class="hl-good">for (j=right; j>=left; j--)</span>
+            res.add(matrix[bottom][j]);
+        bottom--;
+    }
+
+    <span class="hl-good">if (left <= right) {</span>  <span class="hl-comment">// ✅ 防单列重复</span>
+        <span class="hl-good">for (i=bottom; i>=top; i--)</span>
+            res.add(matrix[i][left]);
+        left++;
+    }
+}</pre>
+      </div>
+    </div>
+
+    <table class="diff-table">
+      <tr>
+        <th>对比维度</th>
+        <th>你的写法</th>
+        <th>标准答案</th>
+      </tr>
+      <tr>
+        <td class="dim-cell">坐标维护</td>
+        <td class="bad-cell">手动 i++, j++, j--, i--</td>
+        <td class="good-cell">不需要，for 循环自带</td>
+      </tr>
+      <tr>
+        <td class="dim-cell">步数计算</td>
+        <td class="bad-cell">k<=right-left 等，4处不同公式</td>
+        <td class="good-cell">不需要，边界即范围</td>
+      </tr>
+      <tr>
+        <td class="dim-cell">起始元素</td>
+        <td class="bad-cell">单独 res.add(matrix[i][j])，易重复</td>
+        <td class="good-cell">包含在第一个 for 中，无特殊处理</td>
+      </tr>
+      <tr>
+        <td class="dim-cell">圈间衔接</td>
+        <td class="bad-cell">手动 j++ 归位到下一圈起点</td>
+        <td class="good-cell">不需要，边界自动收缩</td>
+      </tr>
+      <tr>
+        <td class="dim-cell">单行/单列保护</td>
+        <td class="bad-cell">if break，但保护不完整</td>
+        <td class="good-cell">if 包裹整段，彻底防重复</td>
+      </tr>
+      <tr>
+        <td class="dim-cell">代码行数</td>
+        <td class="accent-cell">~20 行核心逻辑</td>
+        <td class="good-cell">~12 行核心逻辑</td>
+      </tr>
+      <tr>
+        <td class="dim-cell">出错概率</td>
+        <td class="bad-cell">高（步数、坐标、归位都易错）</td>
+        <td class="good-cell">极低（每步语义清晰独立）</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <div class="summary-box">
+    <p>
+      你的<span class="highlight-cyan">算法思维</span>已经达到优秀水平——独立推导出逐圈遍历 + 四指针边界收缩，这是这道题的<span class="highlight-green">最优思路</span>。<br>
+      但你的<span class="highlight-red">代码表达</span>还有提升空间——思路是"按边界遍历"，代码却写成了"按坐标行走"，中间的转化损失导致了步数计算、坐标归位等容易出错的细节。<br><br>
+      <strong>核心教训：让代码结构直接反映思路，而不是用底层操作模拟思路。</strong><br>
+      想的是"走一条边"→ 就写 for(left→right)，不要写 k++ 和 j++。
+    </p>
+  </div>
+</div>
+
+<div class="footer">Spiral Matrix Thinking Visualization</div>
+
+</div>
+
+<script>
+(function(){
+  var matrix = [
+    [1,2,3,4],
+    [5,6,7,8],
+    [9,10,11,12],
+    [13,14,15,16]
+  ];
+  var rows = matrix.length, cols = matrix[0].length;
+
+  var grid = document.getElementById('matrixGrid');
+  grid.style.gridTemplateColumns = 'repeat('+cols+',48px)';
+
+  for(var r=0;r<rows;r++){
+    for(var c=0;c<cols;c++){
+      var cell = document.createElement('div');
+      cell.className = 'matrix-cell';
+      cell.id = 'cell-'+r+'-'+c;
+      cell.textContent = matrix[r][c];
+      grid.appendChild(cell);
+    }
+  }
+
+  function generateSteps(){
+    var steps = [];
+    var top=0, bottom=rows-1, left=0, right=cols-1;
+    while(top<=bottom && left<=right){
+      for(var j=left;j<=right;j++) steps.push({r:top,c:j,dir:'right'});
+      top++;
+      for(var i=top;i<=bottom;i++) steps.push({r:i,c:right,dir:'down'});
+      right--;
+      if(top<=bottom){
+        for(var j=right;j>=left;j--) steps.push({r:bottom,c:j,dir:'left'});
+        bottom--;
+      }
+      if(left<=right){
+        for(var i=bottom;i>=top;i--) steps.push({r:i,c:left,dir:'up'});
+        left++;
+      }
+    }
+    return steps;
+  }
+
+  var steps = generateSteps();
+  var currentStep = -1;
+  var playing = false;
+  var timer = null;
+  var visited = {};
+
+  var resultSeq = document.getElementById('resultSeq');
+  for(var i=0;i<steps.length;i++){
+    var num = document.createElement('div');
+    num.className = 'result-num';
+    num.id = 'seq-'+i;
+    num.textContent = matrix[steps[i].r][steps[i].c];
+    resultSeq.appendChild(num);
+  }
+
+  function updateBoundary(step){
+    var top=0,bottom=rows-1,left=0,right=cols-1;
+    var s = step + 1;
+    var t=0,b=rows-1,l=0,r=cols-1;
+    var idx=0;
+    while(t<=b && l<=r){
+      for(var j=l;j<=r;j++){if(idx>=s)break;idx++;}
+      if(idx>=s){t=top=t;b=bottom=b;l=left=l;r=right=r;break;}
+      t++;top=t;
+      for(var i=t;i<=b;i++){if(idx>=s)break;idx++;}
+      if(idx>=s){bottom=b;left=l;right=r;break;}
+      r--;right=r;
+      if(t<=b){
+        for(var j=r;j>=l;j--){if(idx>=s)break;idx++;}
+        if(idx>=s){bottom=b;left=l;break;}
+        b--;bottom=b;
+      }
+      if(l<=r){
+        for(var i=b;i>=t;i--){if(idx>=s)break;idx++;}
+        if(idx>=s){left=l;break;}
+        l++;left=l;
+      }
+    }
+    document.getElementById('bTop').textContent=top;
+    document.getElementById('bBottom').textContent=bottom;
+    document.getElementById('bLeft').textContent=left;
+    document.getElementById('bRight').textContent=right;
+  }
+
+  function renderStep(step){
+    for(var r=0;r<rows;r++){
+      for(var c=0;c<cols;c++){
+        var cell = document.getElementById('cell-'+r+'-'+c);
+        cell.className = 'matrix-cell';
+        if(visited[r+','+c] !== undefined){
+          if(visited[r+','+c] < step){
+            cell.classList.add('done');
+          }
+        }
+      }
+    }
+    if(step >= 0 && step < steps.length){
+      var s = steps[step];
+      var cell = document.getElementById('cell-'+s.r+'-'+s.c);
+      cell.classList.add('active','dir-'+s.dir);
+      visited[s.r+','+s.c] = step;
+    }
+    for(var i=0;i<steps.length;i++){
+      var el = document.getElementById('seq-'+i);
+      el.className = 'result-num';
+      if(i <= step) el.classList.add('highlight');
+    }
+    updateBoundary(step);
+  }
+
+  function nextStep(){
+    if(currentStep >= steps.length - 1){
+      stopPlay();
+      return;
+    }
+    currentStep++;
+    renderStep(currentStep);
+  }
+
+  function startPlay(){
+    if(playing) return;
+    playing = true;
+    timer = setInterval(nextStep, 350);
+  }
+
+  function stopPlay(){
+    playing = false;
+    if(timer) clearInterval(timer);
+    timer = null;
+  }
+
+  function resetAll(){
+    stopPlay();
+    currentStep = -1;
+    visited = {};
+    for(var r=0;r<rows;r++){
+      for(var c=0;c<cols;c++){
+        document.getElementById('cell-'+r+'-'+c).className = 'matrix-cell';
+      }
+    }
+    for(var i=0;i<steps.length;i++){
+      document.getElementById('seq-'+i).className = 'result-num';
+    }
+    document.getElementById('bTop').textContent='0';
+    document.getElementById('bBottom').textContent=String(rows-1);
+    document.getElementById('bLeft').textContent='0';
+    document.getElementById('bRight').textContent=String(cols-1);
+  }
+
+  document.getElementById('btnPlay').onclick = function(){
+    if(currentStep >= steps.length-1) resetAll();
+    startPlay();
+  };
+  document.getElementById('btnPause').onclick = stopPlay;
+  document.getElementById('btnStep').onclick = function(){ stopPlay(); nextStep(); };
+  document.getElementById('btnReset').onclick = resetAll;
+
+  var thinkSteps = document.querySelectorAll('.think-step');
+  var thinkObserver = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        entry.target.classList.add('visible');
+        thinkObserver.unobserve(entry.target);
+      }
+    });
+  },{threshold:0.15});
+  thinkSteps.forEach(function(item){ thinkObserver.observe(item); });
+})();
+</script>
+</body>
+</html>
