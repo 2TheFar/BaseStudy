@@ -26,6 +26,9 @@ class Trie {
      * TrieNode child = cur.children[word.charAt(i) - 'a'];
      * 然后又让child等于new TrieNode()的地址
      * 这不代表我让儿子指针指向了新节点，只代表child从指向null变成了指向新节点
+     * 引用型变量只是一个变量，它有自己的地址空间，它本身不是一个对象，只有一个名字
+     * 不可能说A是A，B也是A
+     * 它的操作方法不是找到唯一的内存空间，它的操作方法只是赋值，单纯是把值复制了一份
      */
     public void insert(String word) {
         TrieNode cur = this.root;
